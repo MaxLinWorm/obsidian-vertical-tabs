@@ -9,7 +9,7 @@ import {
 	VIEW_CUE_DELAY,
 	DEFAULT_GROUP_TITLE,
 } from "src/models/ViewState";
-import { debounce, ItemView, Platform, TFolder } from "obsidian";
+import { debounce, ItemView, Platform, TFolder, WorkspaceLeaf } from "obsidian";
 import { EVENTS } from "src/constants/Events";
 import { REFRESH_TIMEOUT, REFRESH_TIMEOUT_LONG } from "src/constants/Timeouts";
 import {
@@ -22,6 +22,8 @@ import { resetZoom, zoomIn, zoomOut } from "src/services/TabZoom";
 import { isSelfVisible } from "src/services/Visibility";
 import {
 	autoCloseOldEphemeralTabs,
+	focusNewTabForFile,
+	handleCmdClickOnFileExplorer,
 	initEphemeralTabs,
 	installTabHeaderHandlers,
 	makeDblclickedFileNonEphemeral,
@@ -68,6 +70,12 @@ export const NavigationContainer = () => {
 
 	// Alt key timeout reference to allow cancellation
 	const altKeyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+	// Previous active leaf reference for new-tab freeze behavior
+	const previousActiveLeafRef = useRef<WorkspaceLeaf | null>(null);
+
+	// Pending file path to focus after Obsidian creates the new tab
+	const pendingFocusPathRef = useRef<string | null>(null);
 
 	// Helper function to detect if drag target is a tab
 	const isLeafDragTarget = (target: Element): boolean => {
@@ -148,6 +156,38 @@ export const NavigationContainer = () => {
 		plugin.registerEvent(workspace.on("active-leaf-change", autoRefresh));
 		plugin.registerEvent(
 			workspace.on("active-leaf-change", autoUncollapseGroup)
+		);
+		plugin.registerEvent(
+			workspace.on("active-leaf-change", (leaf) => {
+				const settings = useSettings.getState();
+				if (
+					settings.ephemeralTabs &&
+					settings.newTabFreezesCurrentTab &&
+					leaf?.view.getViewType() === "empty" &&
+					leaf.isEphemeral === undefined
+				) {
+					const prevLeaf = previousActiveLeafRef.current;
+					if (prevLeaf && prevLeaf.isEphemeral) {
+						makeLeafNonEphemeral(prevLeaf);
+					}
+				}
+				previousActiveLeafRef.current = leaf ?? null;
+			})
+		);
+		plugin.registerDomEvent(document, "mousedown", (event) => {
+			const settings = useSettings.getState();
+			if (settings.ephemeralTabs && settings.cmdClickFreezesCurrentTab) {
+				const path = handleCmdClickOnFileExplorer(app, event);
+				if (path) pendingFocusPathRef.current = path;
+			}
+		});
+		plugin.registerEvent(
+			workspace.on("layout-change", () => {
+				const path = pendingFocusPathRef.current;
+				if (!path) return;
+				pendingFocusPathRef.current = null;
+				focusNewTabForFile(app, path);
+			})
 		);
 		plugin.registerEvent(workspace.on("resize", debounce(updateToggles)));
 		plugin.registerEvent(workspace.on(EVENTS.UPDATE_TOGGLE, updateToggles));

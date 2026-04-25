@@ -1,5 +1,6 @@
 import {
 	App,
+	Keymap,
 	MarkdownFileInfo,
 	MarkdownView,
 	TAbstractFile,
@@ -210,6 +211,43 @@ export function makeDblclickedFileNonEphemeral(app: App, event: MouseEvent) {
 	if (!path) return;
 	const file = app.vault.getAbstractFileByPath(path);
 	makeTheLatestFileNonEphemeral(app, file);
+}
+
+export function handleCmdClickOnFileExplorer(
+	app: App,
+	event: MouseEvent
+): string | null {
+	if (!Keymap.isModEvent(event)) return null;
+	const target = event.target as HTMLElement;
+	const fileTitleEl = target.matchParent(".nav-file-title");
+	if (!fileTitleEl) return null;
+	const path = fileTitleEl.getAttribute("data-path");
+	if (!path) return null;
+	const activeLeaf = useViewState.getState().latestActiveLeaf;
+	if (activeLeaf && activeLeaf.isEphemeral) {
+		makeLeafNonEphemeral(activeLeaf);
+	}
+	return path;
+}
+
+export function focusNewTabForFile(app: App, path: string) {
+	const file = app.vault.getAbstractFileByPath(path);
+	if (!file || !(file instanceof TFile)) return;
+	let newestLeaf: WorkspaceLeaf | null = null;
+	let newestTime = 0;
+	app.workspace.iterateAllLeaves((leaf) => {
+		const leafFile = getOpenFileOfLeaf(app, leaf);
+		if (leafFile?.path === file.path) {
+			const time = leaf.guessedCreationTime ?? leaf.activeTime ?? 0;
+			if (time >= newestTime) {
+				newestTime = time;
+				newestLeaf = leaf;
+			}
+		}
+	});
+	if (newestLeaf) {
+		app.workspace.setActiveLeaf(newestLeaf, { focus: true });
+	}
 }
 
 export function makeQuickSwitcherFileNonEphemeral(

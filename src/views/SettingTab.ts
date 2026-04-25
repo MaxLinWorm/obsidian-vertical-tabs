@@ -683,6 +683,26 @@ export class ObsidianVerticalTabsSettingTab extends PluginSettingTab {
 					autoCloseEphemeralTabs: value,
 				}),
 		});
+
+		this.createToggle(containerEl, {
+			name: "Cmd-click freezes current tab",
+			desc: "When Cmd/Ctrl-clicking a file in the file explorer, freeze the current tab and open the file in a new ephemeral tab.",
+			value: this.plugin.settings.cmdClickFreezesCurrentTab,
+			onChange: (value) =>
+				useSettings
+					.getState()
+					.setSettings({ cmdClickFreezesCurrentTab: value }),
+		});
+
+		this.createToggle(containerEl, {
+			name: "New tab freezes current tab",
+			desc: "When opening a new empty tab, automatically freeze the current tab.",
+			value: this.plugin.settings.newTabFreezesCurrentTab,
+			onChange: (value) =>
+				useSettings
+					.getState()
+					.setSettings({ newTabFreezesCurrentTab: value }),
+		});
 	}
 
 	private displayDeduplicationToggle(

@@ -38,6 +38,8 @@ interface ObsidianVerticalTabsSettings {
 	disableOnThisDevice: boolean;
 	enableUpdateCheck: boolean;
 	showNewTabButtonAtBottom: boolean;
+	cmdClickFreezesCurrentTab: boolean;
+	newTabFreezesCurrentTab: boolean;
 }
 
 export const DEFAULT_SETTINGS: ObsidianVerticalTabsSettings = {
@@ -77,6 +79,8 @@ export const DEFAULT_SETTINGS: ObsidianVerticalTabsSettings = {
 	disableOnThisDevice: false,
 	enableUpdateCheck: true,
 	showNewTabButtonAtBottom: false,
+	cmdClickFreezesCurrentTab: false,
+	newTabFreezesCurrentTab: false,
 };
 
 export type Settings = ObsidianVerticalTabsSettings;
